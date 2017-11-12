@@ -20,8 +20,8 @@ const dynamo = new doc.DynamoDB();
 exports.handler = (event, context, callback) => {
     const hash = crypto.createHash('sha256');
     const parsedBody = JSON.parse(event.body);
-    console.log('Received event:', JSON.stringify(event, null, 2));
-    console.log('username',parsedBody.username);
+    //console.log('Received event:', JSON.stringify(event, null, 2));
+    //console.log('username',parsedBody.username);
     //console.log(JSON.stringify({"username":event.queryStringParameters.username,"password":event.queryStringParameters.password}));
     const done = (err, res) => callback(null, {
         statusCode: err ? '400' : '200',
@@ -32,17 +32,27 @@ exports.handler = (event, context, callback) => {
         },
     });
     
-    var params = {};
-    params.TableName = "larrys-user";
-    params.KeyConditionExpression = {"username":{"S":parsedBody.username}};
-    
+    var params = {
+        TableName : "larrys-user",
+        KeyConditionExpression: "#username = :user",
+        ExpressionAttributeNames:{
+            "#username": "username"
+        },
+        ExpressionAttributeValues: {
+            ":user":parsedBody.username
+        }
+    };
 
+    console.log(params);
 
     switch (event.httpMethod) {
         case 'POST':
             //Salt and hash PW.
             dynamo.scan(params, function(err,res) {
-                if(err) done(err,res);
+                if(err) {
+                    console.log(err);
+                    done(err,res);
+                }
                 else {
                     console.log("QUERY RESULT:" + res);
                     done(null,res);
