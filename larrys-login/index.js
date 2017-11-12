@@ -18,8 +18,10 @@ const dynamo = new doc.DynamoDB();
  * DynamoDB API as a JSON body.
  */
 exports.handler = (event, context, callback) => {
+    const hash = crypto.createHash('sha256');
+    const parsedBody = JSON.parse(event.body);
     console.log('Received event:', JSON.stringify(event, null, 2));
-    console.log('username',JSON.parse(event.body).username);
+    console.log('username',parsedBody.username);
     //console.log(JSON.stringify({"username":event.queryStringParameters.username,"password":event.queryStringParameters.password}));
     const done = (err, res) => callback(null, {
         statusCode: err ? '400' : '200',
@@ -29,31 +31,31 @@ exports.handler = (event, context, callback) => {
             'Access-Control-Allow-Origin': '*',
         },
     });
-    const hash = crypto.createHash('sha256');
-    var params = {};
     
+    var params = {};
     params.TableName = "larrys-user";
-    const parsedBody = JSON.parse(event.body);
+    params.KeyConditionExpression = {"username":{"S":parsedBody.username}};
+    
+
+
     switch (event.httpMethod) {
-        case 'DELETE':
-            //dynamo.deleteItem(JSON.parse(event.body), done);
-            break;
-        case 'GET':
-            dynamo.scan(params, done);
-            //done(null,event.queryStringParameters);
-            break;
         case 'POST':
             //Salt and hash PW.
-            const salt = crypto.randomBytes(16);
-            hash.update(parsedBody.password + salt);
-            const hashedPass = hash.digest('hex');
-            console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt)
-            params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt};
-            dynamo.putItem(params, done);
+            dynamo.scan(params, function(err,res) {
+                if(err) done(err,res);
+                else {
+                    console.log("QUERY RESULT:" + res);
+                    hash.update(parsedBody.password + salt);
+                }
+
+            });
+            
+            /* Code from register-user */
+            //const hashedPass = hash.digest('hex');
+            //console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt)
+            //params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt};
+            //dynamo.putItem(params, done);
             //done(null,event.body);
-            break;
-        case 'PUT':
-            //dynamo.updateItem(JSON.parse(event.body), done);
             break;
         default:
             done(new Error(`Unsupported method "${event.httpMethod}"`));

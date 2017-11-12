@@ -35,25 +35,16 @@ exports.handler = (event, context, callback) => {
     params.TableName = "larrys-user";
     const parsedBody = JSON.parse(event.body);
     switch (event.httpMethod) {
-        case 'DELETE':
-            //dynamo.deleteItem(JSON.parse(event.body), done);
-            break;
-        case 'GET':
-            dynamo.scan(params, done);
-            //done(null,event.queryStringParameters);
-            break;
         case 'POST':
             //Salt and hash PW.
             const salt = crypto.randomBytes(16);
             hash.update(parsedBody.password + salt);
             const hashedPass = hash.digest('hex');
+            
             console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt)
             params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt};
             dynamo.putItem(params, done);
             //done(null,event.body);
-            break;
-        case 'PUT':
-            //dynamo.updateItem(JSON.parse(event.body), done);
             break;
         default:
             done(new Error(`Unsupported method "${event.httpMethod}"`));
