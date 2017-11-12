@@ -66,7 +66,7 @@ exports.handler = (event, context, callback) => {
                         else {
                             //Create new token.
                             var exptime = new Date().getTime() + 3600000; //current time + 1 hour
-                            const cipher = crypto.createCipher('aes192','hANtBs3yjrwkgK9gQSecqN4UpyATb7dx');
+                            const cipher = crypto.createCipher('aes192','hANtBs3yjrwkgK9gQSecqN4UpyATb7dx'); //CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
                             let token = cipher.update(JSON.stringify({"username":data.Items[0].username,"expiration":exptime}), 'utf8', 'hex');
                             token += cipher.final('hex');
                             done(null,{"token":token});
