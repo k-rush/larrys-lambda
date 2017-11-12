@@ -24,8 +24,8 @@ exports.handler = (event, context, callback) => {
     
 
     switch (event.httpMethod) {
-        case 'GET':
-            const decipher = crypto.createDecipher('aes-192',key); //CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
+        case 'POST':
+            const decipher = crypto.createDecipher('aes192',key); //CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
             var decipheredToken = decipher.update(event.queryStringParameters.token, 'utf8', 'hex');
             decipheredToken += decipher.final('utf8');
             console.log('DECIPHERED TOKEN:' + decipheredToken);
