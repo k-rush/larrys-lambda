@@ -45,7 +45,8 @@ exports.handler = (event, context, callback) => {
                 if(err) done(err,res);
                 else {
                     console.log("QUERY RESULT:" + res);
-                    hash.update(parsedBody.password + salt);
+                    done(null,res);
+                    //hash.update(parsedBody.password + salt);
                 }
 
             });
