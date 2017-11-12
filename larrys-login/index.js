@@ -8,17 +8,12 @@ const dynamo = new doc.DynamoDB();
 
 
 /**
- * Demonstrates a simple HTTP endpoint using API Gateway. You have full
- * access to the request and response payload, including headers and
- * status code.
- *
- * To scan a DynamoDB table, make a GET request with the TableName as a
- * query string parameter. To put, update, or delete an item, make a POST,
- * PUT, or DELETE request respectively, passing in the payload to the
- * DynamoDB API as a JSON body.
+ * Validates username and password for Larry's Electric scheduling app.
+ * To recieve validation token, make post request with 'username' and 
+ * 'password' fields that correspond to a registered user.
  */
 exports.handler = (event, context, callback) => {
-    const hash = crypto.createHash('sha256');
+    
     const parsedBody = JSON.parse(event.body);
     //console.log('Received event:', JSON.stringify(event, null, 2));
     //console.log('username',parsedBody.username);
@@ -48,25 +43,45 @@ exports.handler = (event, context, callback) => {
     switch (event.httpMethod) {
         case 'POST':
             //Salt and hash PW.
-            dynamo.query(params, function(err,res) {
+            dynamo.query(params, function(err,data) {
                 if(err) {
                     console.log(err);
-                    done(err,res);
+                    done(err,data);
                 }
+
                 else {
-                    console.log("QUERY RESULT:" + res);
-                    done(null,res);
-                    //hash.update(parsedBody.password + salt);
+                    console.log("QUERY RESULT:" + JSON.stringify(data.Items));
+                    if(data.Items[0].username != parsedBody.username) {
+                        done({message:"Username or password incorrect."},data);
+                    }
+                    else {
+                        const dbHashedPass = data.Items[0].password; // retrieve hashed pw from database
+                        
+                        //Compute new hash and compare it to the one in DB.
+                        const hash = crypto.createHash('sha256');
+                        hash.update(parsedBody.password + data.Items[0].salt);
+                        if(data.Items[0].password != hash.digest('hex')) {
+                            done({message:"Username or password incorrect."},data);
+                        }
+                        else {
+                            //Create new token.
+                            var exptime = new Date().getTime() + 3600000; //current time + 1 hour
+                            const cipher = crypto.createCipher('aes192','hANtBs3yjrwkgK9gQSecqN4UpyATb7dx');
+                            let token = cipher.update(JSON.stringify({"username":data.Items[0].username,"expiration":exptime}), 'utf8', 'hex');
+                            token += cipher.final('hex');
+                            done(null,{"token":token});
+                        }
+                    }
+
+
+
+
+                    done(null,data);
+                    
                 }
 
             });
             
-            /* Code from register-user */
-            //const hashedPass = hash.digest('hex');
-            //console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt)
-            //params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt};
-            //dynamo.putItem(params, done);
-            //done(null,event.body);
             break;
         default:
             done(new Error(`Unsupported method "${event.httpMethod}"`));
