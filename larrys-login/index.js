@@ -48,7 +48,7 @@ exports.handler = (event, context, callback) => {
     switch (event.httpMethod) {
         case 'POST':
             //Salt and hash PW.
-            dynamo.scan(params, function(err,res) {
+            dynamo.query(params, function(err,res) {
                 if(err) {
                     console.log(err);
                     done(err,res);
