@@ -1,5 +1,5 @@
 'use strict';
-var sha256 = require('node_modules/js-sha256');
+var sha256 = require('js-sha256');
 console.log('Loading function');
 
 const doc = require('dynamodb-doc');
