@@ -13,7 +13,7 @@ const dynamo = new doc.DynamoDB();
  * 'password' fields that correspond to a registered user.
  */
 exports.handler = (event, context, callback) => {
-    
+    const key = 'hANtBs3yjrwkgK9g';//CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
     const parsedBody = JSON.parse(event.body);
     //console.log('Received event:', JSON.stringify(event, null, 2));
     //console.log('username',parsedBody.username);
@@ -66,9 +66,10 @@ exports.handler = (event, context, callback) => {
                         else {
                             //Create new token.
                             var exptime = new Date().getTime() + 3600000; //current time + 1 hour
-                            const cipher = crypto.createCipher('aes192','hANtBs3yjrwkgK9gQSecqN4UpyATb7dx'); //CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
-                            let token = cipher.update(JSON.stringify({"username":data.Items[0].username,"expiration":exptime}), 'utf8', 'hex');
-                            token += cipher.final('hex');
+                            //var cipher = crypto.createCipher('aes-192',key); 
+                            //var token = cipher.update(JSON.stringify({"username":data.Items[0].username,"expiration":exptime}), 'utf8', 'hex');
+                            //token = cipher.final('hex');
+                            var token = 'token';
                             done(null,{"token":token});
                         }
                     }
