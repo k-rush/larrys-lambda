@@ -25,11 +25,14 @@ exports.handler = (event, context, callback) => {
 
     switch (event.httpMethod) {
         case 'POST':
-            const decipher = crypto.createDecipher('aes192',key); //CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
-            var decipheredToken = decipher.update(event.queryStringParameters.token, 'utf8', 'hex');
+            const token = JSON.parse(event.body).token;
+            console.log("Token: " + token);
+            const decipher = crypto.createDecipher('aes192',key);
+            var decipheredToken = decipher.update(token, 'hex', 'utf8');
             decipheredToken += decipher.final('utf8');
             console.log('DECIPHERED TOKEN:' + decipheredToken);
-            done(null,{"decipheredToken":decipheredToken});
+            done(null,JSON.parse(decipheredToken));
+
             break;
         default:
             done(new Error(`Unsupported method "${event.httpMethod}"`));
