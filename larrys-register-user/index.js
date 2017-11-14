@@ -53,22 +53,25 @@ exports.handler = (event, context, callback) => {
                 }
 
                 else {
-                    console.log("QUERY RESULT:" + JSON.stringify(data.Items));
-                    if(data.Items != null) {
+                    console.log("\n\nQUERY RESULT:" + JSON.stringify(data.Items) + "\n\n + data.Items > 0 =" + (data.Items.length > 0));
+                    if(data.Items.length > 0) {
                         done({message:"Username already exists."},data);
+                    }
+                    else {
+                        //Salt and hash PW.
+                        const salt = crypto.randomBytes(16);
+                        hash.update(parsedBody.password + salt);
+                        const hashedPass = hash.digest('hex');
+
+                        console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt);
+                        params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt};
+                        dynamo.putItem(params, done);
+                        //done(null,event.body);
                     }
                 }
             });
 
-            //Salt and hash PW.
-            const salt = crypto.randomBytes(16);
-            hash.update(parsedBody.password + salt);
-            const hashedPass = hash.digest('hex');
-
-            console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt)
-            params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt};
-            dynamo.putItem(params, done);
-            //done(null,event.body);
+            
             break;
         default:
             done(new Error(`Unsupported method "${event.httpMethod}"`));
