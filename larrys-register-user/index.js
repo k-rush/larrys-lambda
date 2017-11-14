@@ -11,6 +11,9 @@ const dynamo = new doc.DynamoDB();
  * Registers new user.
  */
 exports.handler = (event, context, callback) => {
+
+    const parsedBody = JSON.parse(event.body);
+
     console.log('Received event:', JSON.stringify(event, null, 2));
     console.log('username',JSON.parse(event.body).username);
     //console.log(JSON.stringify({"username":event.queryStringParameters.username,"password":event.queryStringParameters.password}));
@@ -23,12 +26,40 @@ exports.handler = (event, context, callback) => {
         },
     });
     const hash = crypto.createHash('sha256');
+
+    var queryParams = {
+        TableName : "larrys-user",
+        KeyConditionExpression: "#username = :user",
+        ExpressionAttributeNames:{
+            "#username": "username"
+        },
+        ExpressionAttributeValues: {
+            ":user":parsedBody.username
+        }
+    };
+
     var params = {};
     
     params.TableName = "larrys-user";
-    const parsedBody = JSON.parse(event.body);
+    
     switch (event.httpMethod) {
         case 'POST':
+            //Query DB to see if username exists.
+            console.log("QUERY PARAMS:" + JSON.stringify(queryParams));
+            dynamo.query(queryParams, function(err,data) {
+                if(err) {
+                    console.log(err);
+                    done(err,data);
+                }
+
+                else {
+                    console.log("QUERY RESULT:" + JSON.stringify(data.Items));
+                    if(data.Items != null) {
+                        done({message:"Username already exists."},data);
+                    }
+                }
+            });
+
             //Salt and hash PW.
             const salt = crypto.randomBytes(16);
             hash.update(parsedBody.password + salt);

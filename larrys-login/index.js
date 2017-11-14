@@ -42,7 +42,7 @@ exports.handler = (event, context, callback) => {
 
     switch (event.httpMethod) {
         case 'POST':
-            //Salt and hash PW.
+            
             dynamo.query(params, function(err,data) {
                 if(err) {
                     console.log(err);
@@ -51,7 +51,7 @@ exports.handler = (event, context, callback) => {
 
                 else {
                     console.log("QUERY RESULT:" + JSON.stringify(data.Items));
-                    if(data.Items != null) {
+                    if(data.Items == null) {
                         done({message:"Username or password incorrect."},data);
                     }
                     else {
