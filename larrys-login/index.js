@@ -51,7 +51,7 @@ exports.handler = (event, context, callback) => {
 
                 else {
                     console.log("QUERY RESULT:" + JSON.stringify(data.Items));
-                    if(data.Items.size < 1) {
+                    if(data.Items != null) {
                         done({message:"Username or password incorrect."},data);
                     }
                     else {
@@ -70,7 +70,10 @@ exports.handler = (event, context, callback) => {
                             var token = cipher.update(JSON.stringify({"username":data.Items[0].username,"expiration":exptime}), 'utf8', 'hex');
                             token += cipher.final('hex');
 
-                            
+                            const decipher = crypto.createDecipher('aes192',key);
+                            var decipheredToken = decipher.update(token, 'hex', 'utf8');
+                            decipheredToken += decipher.final('utf8');
+                            console.log("Roundtrip result: " + decipheredToken);
                             //var token = 'token';
                             done(null,{"token":token});
                         }
