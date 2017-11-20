@@ -64,7 +64,7 @@ exports.handler = (event, context, callback) => {
                         const hashedPass = hash.digest('hex');
 
                         console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt);
-                        params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt, "email":parsedBody.email, "firstname":parsedBody.firstname, "lastname",parsedBody.lastname};
+                        params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt, "email":parsedBody.email, "firstname":parsedBody.firstname, "lastname":parsedBody.lastname};
 
 
                         dynamo.putItem(params, done);
