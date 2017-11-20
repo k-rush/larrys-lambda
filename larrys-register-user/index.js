@@ -59,12 +59,15 @@ exports.handler = (event, context, callback) => {
                     }
                     else {
                         //Salt and hash PW.
-                        const salt = crypto.randomBytes(16);
+                        const salt = crypto.randomBytes(16).toString('hex');
                         hash.update(parsedBody.password + salt);
                         const hashedPass = hash.digest('hex');
 
                         console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt);
-                        params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt, "email":parsedBody.email, "firstname":parsedBody.firstname, "lastname":parsedBody.lastname};
+                        
+                        console.log("Typeof params.username:" + typeof parsedBody.username);
+
+                        params.Item = {"username":{S:parsedBody.username}, "password":{S:hashedPass}, "salt":{S:salt}, "email":{S:parsedBody.email}, "firstname":{S:parsedBody.firstname}, "lastname":{S:parsedBody.lastname}};
 
 
                         dynamo.putItem(params, done);

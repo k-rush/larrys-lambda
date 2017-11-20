@@ -51,7 +51,7 @@ exports.handler = (event, context, callback) => {
 
                 else {
                     console.log("QUERY RESULT:" + JSON.stringify(data.Items));
-                    if(data.Items == null) {
+                    if(data.Items.length == 0) {
                         done({message:"Username or password incorrect."},data);
                     }
                     else {
