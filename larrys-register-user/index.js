@@ -67,11 +67,11 @@ exports.handler = (event, context, callback) => {
                         
                         console.log("Typeof params.username:" + typeof parsedBody.username);
 
-                        params.Item = {"username":{S:parsedBody.username}, "password":{S:hashedPass}, "salt":{S:salt}, "email":{S:parsedBody.email}, "firstname":{S:parsedBody.firstname}, "lastname":{S:parsedBody.lastname}};
+                        params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt, "email":parsedBody.email, "firstname":parsedBody.firstname, "lastname":parsedBody.lastname};
 
 
                         dynamo.putItem(params, done);
-                        //done(null,event.body);
+                        //done(null,params.Item);
                     }
                 }
             });
