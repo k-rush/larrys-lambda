@@ -71,11 +71,14 @@ exports.handler = (event, context, callback) => {
                         console.log("Typeof params.username:" + typeof parsedBody.username);
 
                         params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt, "email":parsedBody.email, "firstname":parsedBody.firstname, "lastname":parsedBody.lastname, "verified":false};
-
-                        dynamo.putItem(params, done);
+                        var url = generateValidationURL(parsedBody.username);
+                        dynamo.putItem(params, function(err, data) {
+                            if(!err) sendVerificationEmail([parsedBody.email], url);
+                            done(err,data);
+                        });
                         //NOTE: Email needs to be verified!
 
-                        sendVerificationEmail([parsedBody.email]);
+                        
                     }
                 }
             });
@@ -87,26 +90,38 @@ exports.handler = (event, context, callback) => {
     }
 };
 
+function generateValidationURL(username) {
+    const key = 'hANtBs3yjrwkgK9g'; //TODO CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
+    var exptime = new Date().getTime() + 3600000;
+    var cipher = crypto.createCipher('aes192',key); 
 
-function sendVerificationEmail(to) {
+    var token = cipher.update(JSON.stringify({"username":username,"expiration":exptime}), 'utf8', 'hex');
+    token += cipher.final('hex');
+
+    return "https://87uo5r92ya.execute-api.us-west-2.amazonaws.com/prod/validate-email?token=" + token;
+}
+
+function sendVerificationEmail(to, data) {
     var SES = new AWS.SES({apiVersion: '2010-12-01'});
+    
+
     SES.sendEmail( { 
        Source: "kdr213@gmail.com", 
        Destination: { ToAddresses: to },
        Message: {
            Subject: {
-              Data: 'Verification email'
+              Data: "Email Verification for Larry's Scheduling App"
            },
            Body: {
                Text: {
-                   Data: 'Please verify',
+                   Data: data,
                }
             }
        }
     }
     , function(err, data) {
-        if(err) throw err
+        if(err) throw err;
             console.log('Email sent:');
             console.log(data);
      });
-};
+} 
