@@ -7,6 +7,11 @@ const doc = require('dynamodb-doc');
 
 const dynamo = new doc.DynamoDB();
 
+//CHANGE THESE
+const table = 'larrys-user';
+const senderEmail = 'kdr213@gmail.com';
+const API = "https://87uo5r92ya.execute-api.us-west-2.amazonaws.com/prod/";
+const key = 'hANtBs3yjrwkgK9g'; //TODO CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
 
 /**
  * Registers new user.
@@ -17,7 +22,7 @@ exports.handler = (event, context, callback) => {
 
     console.log('Received event:', JSON.stringify(event, null, 2));
     console.log('username',JSON.parse(event.body).username);
-    //console.log(JSON.stringify({"username":event.queryStringParameters.username,"password":event.queryStringParameters.password}));
+    
     const done = (err, res) => callback(null, {
         statusCode: err ? '400' : '200',
         body: err ? err.message : JSON.stringify(res),
@@ -26,26 +31,23 @@ exports.handler = (event, context, callback) => {
             'Access-Control-Allow-Origin': '*',
         },
     });
-    const hash = crypto.createHash('sha256');
-
-    var queryParams = {
-        TableName : "larrys-user",
-        KeyConditionExpression: "#username = :user",
-        ExpressionAttributeNames:{
-            "#username": "username"
-        },
-        ExpressionAttributeValues: {
-            ":user":parsedBody.username
-        }
-    };
-
-    var params = {};
-    
-    params.TableName = "larrys-user";
     
     switch (event.httpMethod) {
         case 'POST':
-            //Query DB to see if username exists.
+            //Query DB to see if username exists...
+
+            //Parameters used to query dynamo table for the username
+            var queryParams = {
+                TableName : table,
+                KeyConditionExpression: "#username = :user",
+                ExpressionAttributeNames:{
+                    "#username": "username"
+                },
+                ExpressionAttributeValues: {
+                    ":user":parsedBody.username
+                }
+            };
+
             console.log("QUERY PARAMS:" + JSON.stringify(queryParams));
             dynamo.query(queryParams, function(err,data) {
                 if(err) {
@@ -59,25 +61,33 @@ exports.handler = (event, context, callback) => {
                         done({message:"Username already exists."},data);
                     }
                     else {
-                        //Salt and hash PW.
+                        if(!validateFields(parsedBody)) done({message:"Invalid fields, please validate client-side before sending me shit data, scrub."},data);
+                        else {
+                            //Salt and hash PW.
 
-                        //TODO validate password, username, email, names are not null
-                        const salt = crypto.randomBytes(16).toString('hex');
-                        hash.update(parsedBody.password + salt);
-                        const hashedPass = hash.digest('hex');
+                            //TODO validate password, username, email, names are not null
 
-                        console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt);
-                        
-                        console.log("Typeof params.username:" + typeof parsedBody.username);
+                            const hash = crypto.createHash('sha256');
+                            const salt = crypto.randomBytes(16).toString('hex');
+                            hash.update(parsedBody.password + salt);
+                            const hashedPass = hash.digest('hex');
 
-                        params.Item = {"username":parsedBody.username, "password":hashedPass, "salt":salt, "email":parsedBody.email, "firstname":parsedBody.firstname, "lastname":parsedBody.lastname, "verified":false};
-                        var url = generateValidationURL(parsedBody.username);
-                        dynamo.putItem(params, function(err, data) {
-                            if(!err) sendVerificationEmail([parsedBody.email], url);
-                            done(err,data);
-                        });
-                        //NOTE: Email needs to be verified!
-
+                            console.log("USERNAME: " + parsedBody.username + "HASHED PASSWORD:" + hashedPass + " SALT: " + salt);
+                            
+                            //Params used to put new user into database
+                            var params = {
+                                TableName : table,
+                                Item : {"username":parsedBody.username, "password":hashedPass, "salt":salt, "email":parsedBody.email, "firstname":parsedBody.firstname, "lastname":parsedBody.lastname, "verified":false}
+                            };
+                            
+                            var url = generateVerificationURL(parsedBody.username);
+                            
+                            dynamo.putItem(params, function(err, data) {
+                                if(!err) sendVerificationEmail([parsedBody.email], "Email Verification for Larry's Scheduling App", url);
+                                done(err,data);
+                            });
+                            //NOTE: Email needs to be verified!
+                        }
                         
                     }
                 }
@@ -90,27 +100,29 @@ exports.handler = (event, context, callback) => {
     }
 };
 
-function generateValidationURL(username) {
-    const key = 'hANtBs3yjrwkgK9g'; //TODO CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
-    var exptime = new Date().getTime() + 3600000;
+/** Generates a verificaiton URL to be sent in a verification email.
+ *  form: http://<API ENDPOINT>?token=<VERIFICAITON TOKEN>
+ */
+function generateVerificationURL(username) {
+    var exptime = new Date(new Date().setFullYear(new Date().getFullYear() + 1)); //Set expiration time to current year + 1
     var cipher = crypto.createCipher('aes192',key); 
 
     var token = cipher.update(JSON.stringify({"username":username,"expiration":exptime}), 'utf8', 'hex');
     token += cipher.final('hex');
 
-    return "https://87uo5r92ya.execute-api.us-west-2.amazonaws.com/prod/validate-email?token=" + token;
+    //TODO Don't hard-code your API endpoint.
+    return API + "validate-email?token=" + token;
 }
 
-function sendVerificationEmail(to, data) {
+function sendVerificationEmail(to, subject, data) {
     var SES = new AWS.SES({apiVersion: '2010-12-01'});
     
-
     SES.sendEmail( { 
-       Source: "kdr213@gmail.com", 
+       Source: senderEmail,
        Destination: { ToAddresses: to },
        Message: {
            Subject: {
-              Data: "Email Verification for Larry's Scheduling App"
+              Data: subject
            },
            Body: {
                Text: {
@@ -125,3 +137,23 @@ function sendVerificationEmail(to, data) {
             console.log(data);
      });
 } 
+
+/** Validates all of the user registration fields */
+function validateFields(data) {
+    return (isString(data.username) && isString(data.firstname) && isString(data.lastname) && validateEmail(data.email) && validatePassword(data.password));                         
+}
+
+/** Validates email address */
+function validateEmail(email) {  
+    return (isString(email) && /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email))  
+} 
+
+/** Validates password */
+function validatePassword(password) {
+    return (isString(password) && password.length > 6)
+}
+
+/** Tests typeof data is string */
+function isString(data) {
+    return (typeof data === 'string');
+}

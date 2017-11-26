@@ -1,23 +1,20 @@
 'use strict';
 var crypto = require('crypto');
-console.log('Loading function');
-
 const doc = require('dynamodb-doc');
-
 const dynamo = new doc.DynamoDB();
 
-
+const key = 'hANtBs3yjrwkgK9g'; //CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
+const table = 'larrys-user';
 /**
  * Validates username and password for Larry's Electric scheduling app.
  * To recieve validation token, make post request with 'username' and 
  * 'password' fields that correspond to a registered user.
  */
 exports.handler = (event, context, callback) => {
-    const key = 'hANtBs3yjrwkgK9g';//CHANGE THIS IN PRODUCTION SO IT CAN'T BE SCRUBBED FROM GITHUB
+    
+    
     const parsedBody = JSON.parse(event.body);
-    //console.log('Received event:', JSON.stringify(event, null, 2));
-    //console.log('username',parsedBody.username);
-    //console.log(JSON.stringify({"username":event.queryStringParameters.username,"password":event.queryStringParameters.password}));
+
     const done = (err, res) => callback(null, {
         statusCode: err ? '400' : '200',
         body: err ? err.message : JSON.stringify(res),
@@ -28,7 +25,7 @@ exports.handler = (event, context, callback) => {
     });
     
     var params = {
-        TableName : "larrys-user",
+        TableName : table,
         KeyConditionExpression: "#username = :user",
         ExpressionAttributeNames:{
             "#username": "username"
@@ -38,7 +35,6 @@ exports.handler = (event, context, callback) => {
         }
     };
 
-    console.log(params);
 
     switch (event.httpMethod) {
         case 'POST':
@@ -67,14 +63,8 @@ exports.handler = (event, context, callback) => {
                             //Create new token.
                             var exptime = new Date().getTime() + 3600000; //current time + 1 hour
                             var cipher = crypto.createCipher('aes192',key); 
-                            var token = cipher.update(JSON.stringify({"username":data.Items[0].username,"expiration":exptime}), 'utf8', 'hex');
+                            var token = cipher.update(JSON.stringify({"username":data.Items[0].username,"verified":data.Items[0].verified,"expiration":exptime}), 'utf8', 'hex');
                             token += cipher.final('hex');
-
-                            //USE THE FOLLOWING TO TEST A ROUNDTRIP
-                            //const decipher = crypto.createDecipher('aes192',key);
-                            //var decipheredToken = decipher.update(token, 'hex', 'utf8');
-                            //decipheredToken += decipher.final('utf8');
-                            //console.log("Roundtrip result: " + decipheredToken);
                             
                             done(null,{"token":token});
                         }
