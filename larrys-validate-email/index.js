@@ -48,7 +48,7 @@ exports.handler = (event, context, callback) => {
                     console.error("Unable to update item. Error JSON:", JSON.stringify(err, null, 2));
                 } else {
                     console.log("UpdateItem succeeded:", JSON.stringify(data, null, 2));
-                    done(null,JSON.stringify(data, null, 2));
+                    done(null,"Email succesfully validated.");
                 }
             });
             
